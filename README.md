@@ -25,7 +25,7 @@ This simulator gave me a hands-on way to **experiment with real constants** (lik
 - Presets for **Earth–Moon**, **Solar System**, and custom configurations.
 
 ## Tech Stack
-- **Java 17** (via Gradle toolchain)
+- **Java 23** (via Gradle toolchain)
 - **JavaFX** for UI & rendering
 - **Gradle** for build & run (`./gradlew run`)
 - Custom physics engine
