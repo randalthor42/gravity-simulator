@@ -21,7 +21,7 @@ import javafx.stage.Stage;
  * Entry point for the JavaFX application.
  */
 public class MainApp extends Application {
-    private final SystemState state = PresetFactory.solarSystem();
+    private final SystemState state = PresetFactory.earthMoonElliptical();
     private final PhysicsEngine physics = new PhysicsEngine(new LeapfrogIntegrator());
     private final Canvas canvas = new Canvas(800, 600);
     private final Camera camera = new Camera();

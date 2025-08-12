@@ -7,44 +7,54 @@ import dev.andreisima.orbitsim.core.util.Constants;
 import dev.andreisima.orbitsim.core.util.Vector2D;
 
 public final class PresetFactory {
-    private PresetFactory() {}
+    private PresetFactory() {
+    }
 
-    /** Sun–Earth–Moon with COM at rest. */
+    /**
+     * Sun–Earth–Moon with COM at rest.
+     */
     public static SystemState sunEarthMoon() {
-        final double M_SUN   = 1.9885e30;
-        final double R_SUN   = 696_340_000;
-        final double M_EARTH = 5.972e24;
-        final double R_EARTH = 6_371_000;
-        final double M_MOON  = 7.342e22;
-        final double R_MOON  = 1_737_400;
+        // Constants
+        final double M_SUN = 1.9885e30, R_SUN = 6.9634e8;
+        final double M_EARTH = 5.972e24, R_EARTH = 6.371e6;
+        final double M_MOON = 7.342e22, R_MOON = 1.7374e6;
 
-        final double AU      = 149_597_870_700.0;
-        final double R_EM    = 384_400_000.0;
+        final double AU = 1.495978707e11;
+        final double GM_SUN = 1.32712440018e20;   // m^3/s^2
+        final double GM_EARTH = 3.986004418e14;    // m^3/s^2
+
+        // Orbital elements (eccentricities)
+        final double aE = AU, eE = 0.0167;   // Earth
+        final double aM = 384_400_000.0, eM = 0.0549;  // Moon (about Earth)
+
+        // Perihelion/perigee distances & speeds
+        final double rE = aE * (1 - eE);
+        final double vE = Math.sqrt(GM_SUN * (1 + eE) / (aE * (1 - eE)));   // tangential +Y
+        final double rM = aM * (1 - eM);
+        final double vM = Math.sqrt(GM_EARTH * (1 + eM) / (aM * (1 - eM))); // tangential +Y
 
         SystemState state = new SystemState();
 
-        // Positions (m)
-        Vector2D pSun   = new Vector2D(0, 0);
-        Vector2D pEarth = new Vector2D(AU, 0);
-        Vector2D pMoon  = new Vector2D(AU + R_EM, 0);
+        // Sun at origin
+        Body sun = new Body("Sun", BodyType.STAR, M_SUN, R_SUN, new Vector2D(0, 0), new Vector2D(0, 0));
+        // Earth at perihelion (x=rE, v=(0,+vE))
+        Body earth = new Body("Earth", BodyType.PLANET, M_EARTH, R_EARTH, new Vector2D(rE, 0), new Vector2D(0, vE));
+        // Moon at Earth's perigee relative to Earth; add Earth's position & velocity
+        Body moon = new Body("Moon", BodyType.MOON, M_MOON, R_MOON,
+                new Vector2D(rE + rM, 0),
+                new Vector2D(0, vE + vM));
 
-        // Velocities (m/s): circular v around primary, tangential +y
-        double vEarthMag = circSpeed(Constants.G * M_SUN, AU);
-        double vMoonRel  = circSpeed(Constants.G * M_EARTH, R_EM);
+        state.addBody(sun);
+        state.addBody(earth);
+        state.addBody(moon);
 
-        Vector2D vSun   = new Vector2D(0, 0);
-        Vector2D vEarth = new Vector2D(0,  vEarthMag);
-        Vector2D vMoon  = new Vector2D(0,  vEarthMag + vMoonRel); // Earth’s orbital + Moon around Earth
-
-        state.addBody(new Body("Sun",   BodyType.STAR,   M_SUN,   R_SUN,   pSun,   vSun));
-        state.addBody(new Body("Earth", BodyType.PLANET, M_EARTH, R_EARTH, pEarth, vEarth));
-        state.addBody(new Body("Moon",  BodyType.MOON,   M_MOON,  R_MOON,  pMoon,  vMoon));
-
-        zeroTotalMomentum(state);
+        zeroTotalMomentum(state); // keep COM at rest
         return state;
     }
 
-    /** Sun + 8 planets at perihelion (elliptical starts). */
+    /**
+     * Sun + 8 planets at perihelion (elliptical starts).
+     */
     public static SystemState solarSystem() {
         final double M_SUN = 1.9885e30;
         final double R_SUN = 6.9634e8;
@@ -89,7 +99,9 @@ public final class PresetFactory {
     }
 
 
-    /** Equal-mass binary stars at separation d with COM at rest. */
+    /**
+     * Equal-mass binary stars at separation d with COM at rest.
+     */
     public static SystemState binaryStars() {
         SystemState state = new SystemState();
 
@@ -101,9 +113,9 @@ public final class PresetFactory {
         double v = Math.sqrt(Constants.G * m / (2.0 * d));
 
         Vector2D pA = new Vector2D(-d / 2.0, 0);
-        Vector2D pB = new Vector2D( d / 2.0, 0);
+        Vector2D pB = new Vector2D(d / 2.0, 0);
         Vector2D vA = new Vector2D(0, -v);
-        Vector2D vB = new Vector2D(0,  v);
+        Vector2D vB = new Vector2D(0, v);
 
         state.addBody(new Body("Star A", BodyType.STAR, m, rStar, pA, vA));
         state.addBody(new Body("Star B", BodyType.STAR, m, rStar, pB, vB));
@@ -114,12 +126,16 @@ public final class PresetFactory {
 
     /* --- Helpers --- */
 
-    /** Circular orbital speed given GM and radius r. */
+    /**
+     * Circular orbital speed given GM and radius r.
+     */
     private static double circSpeed(double GM, double r) {
         return Math.sqrt(GM / r);
     }
 
-    /** Subtract COM velocity from all bodies so total momentum is zero. */
+    /**
+     * Subtract COM velocity from all bodies so total momentum is zero.
+     */
     private static void zeroTotalMomentum(SystemState state) {
         var bodies = state.getBodies();
         double totalMass = 0.0;
